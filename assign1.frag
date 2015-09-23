@@ -85,7 +85,7 @@ void main()
     // REPLACE THE CONDITION IN THE FOLLOWING IF STATEMENT. //
     //////////////////////////////////////////////////////////
 
-    if ( true )
+    if (dot(ecNNormal, ecViewVec) < 0)
     {
         //======================================================================
         // In here, fragment is backfacing or in the non-bump region.
@@ -98,7 +98,24 @@ void main()
         ///////////////////////////
         // WRITE YOUR CODE HERE. //
         ///////////////////////////
+        vec3 ecLightPos = vec3(gl_LightSource[0].position);
+        vec3 ecLightVec = normalize(ecLightPos - ecPosition);
+        vec3 halfVector = normalize( ecLightVec + ecViewVec );
+        float N_dot_L   = max(0.0, dot(ecNormal, ecLightVec));
+        float N_dot_H   = max(0.0, dot(ecNormal, halfVector));
 
+        float pf = ( N_dot_H == 0.0 ) ? 0.0 : pow( N_dot_H, gl_FrontMaterial.shininess );
+
+        vec4 woodColor =  texture2D(DiffuseTex1, gl_TexCoord[0].st);
+        
+        // Emission and ambient and diffuse.
+        vec4 scene_ambient_diffuse = woodColor * 
+                                    (gl_FrontLightModelProduct.sceneColor + 
+                                    gl_LightSource[0].ambient * gl_FrontMaterial.ambient + 
+                                    gl_LightSource[0].diffuse * gl_FrontMaterial.diffuse * N_dot_L);
+        // Including specular
+        gl_FragColor = scene_ambient_diffuse + 
+                    (gl_LightSource[0].specular * gl_FrontMaterial.specular * pf);
     }
     else
     {
