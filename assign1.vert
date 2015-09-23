@@ -19,9 +19,10 @@ attribute vec3 Tangent;  // Input vertex's tangent vector in model space.
 
 void main( void )
 {
+	ecPosition = vec3(gl_ModelViewMatrix * gl_Vertex);
+	ecNormal = normalize(gl_NormalMatrix * gl_Normal);
+	ecTangent = normalize(gl_NormalMatrix * Tangent);
 
-    ///////////////////////////
-    // WRITE YOUR CODE HERE. //
-    ///////////////////////////
-
+	gl_TexCoord[0]  = gl_MultiTexCoord0;
+	gl_Position     = ftransform();
 }
