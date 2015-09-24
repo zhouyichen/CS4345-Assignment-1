@@ -70,6 +70,15 @@ uniform sampler2D DiffuseTex2;
 
 
 
+vec4 getFragColorWithTexture(vec4 textureColor, float N_dot_L, float pf)
+{
+    vec4 scene_ambient_diffuse = textureColor * 
+                                (gl_FrontLightModelProduct.sceneColor + 
+                                gl_LightSource[0].ambient * gl_FrontMaterial.ambient + 
+                                gl_LightSource[0].diffuse * gl_FrontMaterial.diffuse * N_dot_L);
+    // Including specular
+    return scene_ambient_diffuse + (gl_LightSource[0].specular * gl_FrontMaterial.specular * pf);
+}
 
 void main()
 {
@@ -80,12 +89,13 @@ void main()
     vec3 ecNNormal = normalize( ecNormal );
     vec3 ecViewVec = -normalize( ecPosition );
 
+    vec3 ecLightPos = vec3(gl_LightSource[0].position);
+    vec3 ecLightVec = normalize(ecLightPos - ecPosition);
+    vec3 halfVector = normalize( ecLightVec + ecViewVec );
 
-    //////////////////////////////////////////////////////////
-    // REPLACE THE CONDITION IN THE FOLLOWING IF STATEMENT. //
-    //////////////////////////////////////////////////////////
+    vec4 woodColor =  texture2D(DiffuseTex1, gl_TexCoord[0].st);
 
-    if (dot(ecNNormal, ecViewVec) < 0)
+    if (dot(ecNNormal, ecViewVec) < 0.0)
     {
         //======================================================================
         // In here, fragment is backfacing or in the non-bump region.
@@ -94,28 +104,16 @@ void main()
         // For the lighting computation, use the half-vector approach 
         // to compute the specular component.
 
+        // Emission and ambient and diffuse.
 
         ///////////////////////////
         // WRITE YOUR CODE HERE. //
         ///////////////////////////
-        vec3 ecLightPos = vec3(gl_LightSource[0].position);
-        vec3 ecLightVec = normalize(ecLightPos - ecPosition);
-        vec3 halfVector = normalize( ecLightVec + ecViewVec );
-        float N_dot_L   = max(0.0, dot(ecNormal, ecLightVec));
-        float N_dot_H   = max(0.0, dot(ecNormal, halfVector));
+        float N_dot_L   = max(0.0, dot(-ecNormal, ecLightVec));
+        float N_dot_H   = max(0.0, dot(-ecNormal, halfVector));
 
         float pf = ( N_dot_H == 0.0 ) ? 0.0 : pow( N_dot_H, gl_FrontMaterial.shininess );
-
-        vec4 woodColor =  texture2D(DiffuseTex1, gl_TexCoord[0].st);
-        
-        // Emission and ambient and diffuse.
-        vec4 scene_ambient_diffuse = woodColor * 
-                                    (gl_FrontLightModelProduct.sceneColor + 
-                                    gl_LightSource[0].ambient * gl_FrontMaterial.ambient + 
-                                    gl_LightSource[0].diffuse * gl_FrontMaterial.diffuse * N_dot_L);
-        // Including specular
-        gl_FragColor = scene_ambient_diffuse + 
-                    (gl_LightSource[0].specular * gl_FrontMaterial.specular * pf);
+        gl_FragColor = getFragColorWithTexture(woodColor, N_dot_L, pf);
     }
     else
     {
@@ -131,11 +129,44 @@ void main()
         vec3 ecPerturbedNormal;   // The perturbed normal vector in eye space.
         vec3 ecReflectVec;        // The mirror reflection vector in eye space.
 
-
         ///////////////////////////
         // WRITE YOUR CODE HERE. //
         ///////////////////////////
+        float N_dot_L   = max(0.0, dot(ecNormal, ecLightVec));
+        float N_dot_H   = max(0.0, dot(ecNormal, halfVector));
 
+        float pf = ( N_dot_H == 0.0 ) ? 0.0 : pow( N_dot_H, gl_FrontMaterial.shininess );
+        // if the point is on the sticker
+        if (abs(p.x) <= StickerWidth / 2.0 && abs(p.y) <= StickerWidth / 2.0) 
+        {
+            vec2 stickerCoord = p / StickerWidth + vec2(0.5);
+            vec4 stickerColor = texture2D(DiffuseTex2, stickerCoord);
+            gl_FragColor = getFragColorWithTexture(stickerColor, N_dot_L, pf);
+        }
+        // if the point is on the mirror
+        else if (abs(p.x) >= 0.5 - TubeRadius || abs(p.y) >= 0.5 - TubeRadius)
+        {   
+            if (abs(p.x) > abs(p.y)) 
+            {
+                float x = (abs(p.x) - 0.5) / TubeRadius;
+                float z = sqrt(1.0 - x * x);
+                if (p.x < 0.0) x = -x;
+                tanPerturbedNormal = normalize(vec3(x, 0, z));
+            }
+            else // abs(p.x) <= abs(p.y) 
+            {
+                float y = (abs(p.y) - 0.5) / TubeRadius;
+                float z = sqrt(1.0 - y * y);
+                if (p.y < 0.0) y = -y;
+                tanPerturbedNormal = normalize(vec3(0, y, z));
+            }
+            ecPerturbedNormal = normalize(gl_NormalMatrix * tanPerturbedNormal);
+            ecReflectVec = reflect(-ecViewVec, ecPerturbedNormal);
+            gl_FragColor = textureCube(EnvMap, ecReflectVec);
+        } 
+        else // the point is wooden
+        {
+            gl_FragColor = getFragColorWithTexture(woodColor, N_dot_L, pf);
+        }
     }
-
 }
