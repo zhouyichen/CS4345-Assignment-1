@@ -1,9 +1,9 @@
 //============================================================
-// STUDENT NAME: <your name>
-// MATRIC NO.  : <matric no.>
-// NUS EMAIL   : <your NUS email address>
+// STUDENT NAME: Zhou Yichen
+// MATRIC NO.  : A0113598X
+// NUS EMAIL   : zhouyichen@u.nus.edu
 // COMMENTS TO GRADER:
-// <comments to grader, if any>
+// Thanks for grading!
 //
 //============================================================
 //
