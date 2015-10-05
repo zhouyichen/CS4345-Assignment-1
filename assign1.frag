@@ -160,7 +160,7 @@ void main()
                 if (p.y < 0.0) y = -y;
                 tanPerturbedNormal = normalize(vec3(0, y, z));
             }
-            ecPerturbedNormal = normalize(gl_NormalMatrix * tanPerturbedNormal);
+            ecPerturbedNormal = tanPerturbedNormal.x * T + tanPerturbedNormal.y * B + tanPerturbedNormal.z * N;
             ecReflectVec = reflect(-ecViewVec, ecPerturbedNormal);
             gl_FragColor = textureCube(EnvMap, ecReflectVec);
         } 
