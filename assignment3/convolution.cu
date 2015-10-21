@@ -117,7 +117,31 @@ __global__ void GPU_Convolve2( const float *data, int dataSize,
     //***********************************************
     //*********** WRITE YOUR CODE HERE **************
     //***********************************************
+	if (tx < filterWidth)
+	{
+		filterS[tx] = filter[tx];
+	}
 
+	if (tx > 0)
+	{
+		dataS[tx] = data[tid - BLOCK_SIZE];
+	}
+
+	dataS[tx + BLOCK_SIZE] = data[tid];
+
+	if (tx < NUM_BLOCKS - 1) {
+		dataS[tx + 2 * BLOCK_SIZE] = data[tid + BLOCK_SIZE];
+	}
+
+	__syncthreads();
+	
+	output[tid] = 0.0;
+
+	if (tid >= filterRadius && tid < dataSize - filterRadius)
+	{
+        for ( int k = 0; k < filterWidth; k++ )
+            output[tid] += filterS[k] * dataS[ tx + BLOCK_SIZE - filterRadius + k ];
+	}
 }
 
 
