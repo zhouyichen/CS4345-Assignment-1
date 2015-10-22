@@ -71,12 +71,16 @@ __global__ void GPU_Convolve1( const float *data, int dataSize,
     //***********************************************
     //*********** WRITE YOUR CODE HERE **************
     //***********************************************
+	
+	// set the defualt output to be zero
 	output[tid] = 0.0;
 
+	// if there is enough input in the neighborhood 
 	if (tid >= filterRadius && tid < dataSize - filterRadius)
 	{
+		int start = tid - filterRadius; // the start of input
         for ( int k = 0; k < filterWidth; k++ )
-            output[tid] += filter[k] * data[ tid - filterRadius + k ];
+            output[tid] += filter[k] * data[start + k];
 	}
 }
 
@@ -117,30 +121,35 @@ __global__ void GPU_Convolve2( const float *data, int dataSize,
     //***********************************************
     //*********** WRITE YOUR CODE HERE **************
     //***********************************************
-	if (tx < filterWidth)
-	{
-		filterS[tx] = filter[tx];
-	}
 
-	if (tx > 0)
-	{
+	// write the filter array into shared memory
+	filterS[tx] = filter[tx];
+
+	// write the input data array into shared memory
+
+	if (blockIdx.x > 0) // if this is not the first block
+	{	// read the input from the previous block, and write to shared memory
 		dataS[tx] = data[tid - BLOCK_SIZE];
 	}
-
-	dataS[tx + BLOCK_SIZE] = data[tid];
-
-	if (tx < NUM_BLOCKS - 1) {
+	if (blockIdx.x < NUM_BLOCKS - 1) // if this is not the last block
+	{	// read the input from the next block, and write to shared memory
 		dataS[tx + 2 * BLOCK_SIZE] = data[tid + BLOCK_SIZE];
 	}
+	// read the input from the current block, and write to shared memory
+	dataS[tx + BLOCK_SIZE] = data[tid];
 
+	// sync to make sure all input data are loaded before computation
 	__syncthreads();
-	
+
+	// set the defualt output to be zero
 	output[tid] = 0.0;
 
+	// if there is enough input in the neighborhood 
 	if (tid >= filterRadius && tid < dataSize - filterRadius)
 	{
-        for ( int k = 0; k < filterWidth; k++ )
-            output[tid] += filterS[k] * dataS[ tx + BLOCK_SIZE - filterRadius + k ];
+        int start = tx + BLOCK_SIZE - filterRadius; // the start of input
+		for ( int k = 0; k < filterWidth; k++ )
+            output[tid] += filterS[k] * dataS[start + k];
 	}
 }
 
