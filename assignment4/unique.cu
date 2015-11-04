@@ -1,11 +1,11 @@
 //============================================================
-// STUDENT NAME: <your name>
-// MATRIC NO.  : <matric no.>
-// NUS EMAIL   : <your NUS email address>
+// STUDENT NAME: Zhou Yichen
+// MATRIC NO.  : A0113598X
+// NUS EMAIL   : zhouyichen@u.nus.edu
 // COMMENTS TO GRADER:
-// <comments to grader, if any>
+// Thanks for grading!
 //
-// ============================================================
+//============================================================
 //
 // FILE: unique.cu
 
@@ -84,7 +84,48 @@ __global__ void Kernel_MarkUnique( int *inSortedArray, int *outSelectionArray,
     //***********************************************
     //*********** WRITE YOUR CODE HERE **************
     //***********************************************
+    __shared__ float sharedBlock[BLOCK_SIZE];
 
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int tx = threadIdx.x;
+
+	if (tid < numElems)
+	{
+		// Write the value to the shared block array
+		sharedBlock[tx] = inSortedArray[tid];
+		// sync to make sure all the values are written for the block
+		__syncthreads();
+
+		if (tid == 0)
+		{ // for the first element, always return 1
+			outSelectionArray[tid] = 1;
+		}
+		else
+		{
+			if (tx == 0) // for the first element in a block
+			{ // need to read the previous value from the gloabl memory as it is not in the current block.
+				if(sharedBlock[tx] > inSortedArray[tid - 1])
+				{
+					outSelectionArray[tid] = 1;
+				}
+				else
+				{
+					outSelectionArray[tid] = 0;
+				}
+			}
+			else 
+			{ // otherwise can just read the previous value from the shared memory
+				if (sharedBlock[tx] > sharedBlock[tx - 1])
+				{
+					outSelectionArray[tid] = 1;
+				}
+				else
+				{
+					outSelectionArray[tid] = 0;
+				}
+			}
+		}
+	}
 }
 
 
@@ -114,7 +155,15 @@ __global__ void Kernel_Scatter( int *inArray, int *selectionArray,
     //***********************************************
     //*********** WRITE YOUR CODE HERE **************
     //***********************************************
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
+    if (tid < numElems)
+	{
+        if (selectionArray[tid] == 1)
+		{
+            outArray[scatterAddressArray[tid] + addressOffset] = inArray[tid];
+        }
+    }
 }
 
 
@@ -240,7 +289,17 @@ static void GPU_Unique( const int inputArray[], int numInputElems,
     //***********************************************
     //*********** WRITE YOUR CODE HERE **************
     //***********************************************
+    // Step 1 Sort inputArray[]
+    GPU_SortIntegerArray(d_sortedArray, numInputElems);
+    
+    // Step 2 Mark the unique elements in sortedArray[]
+    Kernel_MarkUnique <<<NUM_BLOCKS, BLOCK_SIZE>>> (d_sortedArray, d_selectionArray, numInputElems);
 
+    // Step 3 Scan selectionArray[] ("inclusive" all-prefix sums)
+    GPU_AllPrefixSums(d_selectionArray, d_scatterAddressArray, numInputElems, &numSelectedElems);
+
+    // Step 4 Scatter sortedArray[] into outputArray[] using scatterAddressArray[] - 1
+    Kernel_Scatter <<<NUM_BLOCKS, BLOCK_SIZE>>> (d_sortedArray, d_selectionArray, d_scatterAddressArray, -1, d_outputArray, numInputElems);
 
 
 //---------------------------------------------------------------------------
