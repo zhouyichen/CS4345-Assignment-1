@@ -159,11 +159,11 @@ __global__ void Kernel_Scatter( int *inArray, int *selectionArray,
 
     if (tid < numElems)
 	{
-        if (selectionArray[tid] == 1)
+		if (selectionArray[tid] == 1)
 		{
-            outArray[scatterAddressArray[tid] + addressOffset] = inArray[tid];
-        }
-    }
+			outArray[scatterAddressArray[tid] + addressOffset] = inArray[tid];
+		}
+	}
 }
 
 
