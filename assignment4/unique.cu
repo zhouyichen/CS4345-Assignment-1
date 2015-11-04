@@ -81,13 +81,13 @@
 __global__ void Kernel_MarkUnique( int *inSortedArray, int *outSelectionArray,
                                    int numElems )
 {
-    //***********************************************
-    //*********** WRITE YOUR CODE HERE **************
-    //***********************************************
-    __shared__ float sharedBlock[BLOCK_SIZE];
+	//***********************************************
+	//*********** WRITE YOUR CODE HERE **************
+	//***********************************************
+	__shared__ float sharedBlock[BLOCK_SIZE];
 
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int tx = threadIdx.x;
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	int tx = threadIdx.x;
 
 	if (tid < numElems)
 	{
@@ -157,7 +157,7 @@ __global__ void Kernel_Scatter( int *inArray, int *selectionArray,
     //***********************************************
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (tid < numElems)
+	if (tid < numElems)
 	{
 		if (selectionArray[tid] == 1)
 		{
